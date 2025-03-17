@@ -2,7 +2,7 @@
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQuick.Dialogs 1.2
-import QtMultimedia 5.12
+// import QtMultimedia 5.12
 
 import gui.controllers 1.0
 
@@ -198,7 +198,7 @@ ApplicationWindow {
             
             Button {
                 id : selcolor
-                text: "选取颜色"
+                text: "pick up color"
                 onClicked: {
                     screenshotProvider.captureScreenshot();
                     loader.setSource("MyColorDialog.qml", { rootWindow: root });
@@ -208,7 +208,7 @@ ApplicationWindow {
             
             // 在已有Loader下方添加LAB显示绑定
             Label {
-                text: `当前LAB值:  L${currentLAB.lL.toFixed(1)} A${currentLAB.lA.toFixed(1)} B${currentLAB.lB.toFixed(1)}`
+                text: `Now LAB:  L${currentLAB.lL.toFixed(1)} A${currentLAB.lA.toFixed(1)} B${currentLAB.lB.toFixed(1)}`
                 font.bold: true
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
@@ -235,7 +235,7 @@ ApplicationWindow {
                 }
 
                 contentItem: Text {
-                    text: "配置颜色: " + colorSelector.currentText
+                    text: "config: " + colorSelector.currentText
                     anchors.centerIn: parent
                     color: parent.palette.text
                     verticalAlignment: Text.AlignVCenter
@@ -281,7 +281,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     // 选项
                     Label {
-                        text: modelData + "通道"
+                        text: modelData + ":"
                         font.bold: true
                     }
                     // 前一个滑条
@@ -309,7 +309,7 @@ ApplicationWindow {
 
         // 配置保存区
         Button {
-            text: "保存配置文件"
+            text: "save config"
             onClicked: saveRequested()
         }
     }

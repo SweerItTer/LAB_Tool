@@ -1,5 +1,5 @@
 #include "dataprocess.h"
-#include "src\core\ColorConverter.h"
+#include "src/core/ColorConverter.h"
 
 using namespace ColorUtils;
 
