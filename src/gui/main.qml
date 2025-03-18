@@ -2,7 +2,7 @@
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQuick.Dialogs 1.2
-import QtMultimedia 5.12
+// import QtMultimedia 5.12
 
 import gui.controllers 1.0
 
@@ -71,6 +71,7 @@ ApplicationWindow {
             anchors.centerIn: parent
             spacing: 10
             Label {
+                id: errorLabel
                 text: "Can't find camera."
                 wrapMode: Text.Wrap
             }
@@ -94,6 +95,15 @@ ApplicationWindow {
         onCheckError: {
             errorPopup.open();
             console.log("camera error");
+        }
+    }
+
+    DataProcess {
+        id: dataProcess
+        onErrorOccurred : (msg) => {
+            errorLabel.text = msg;
+            errorPopup.open();
+            console.log(msg);
         }
     }
 
@@ -157,31 +167,17 @@ ApplicationWindow {
             Layout.fillWidth: true
             spacing: 15
 
-            // VideoOutput {
-            //     id:processVideo
-            //     Layout.minimumHeight: 300
-            //     Layout.fillWidth: true
-            //     Layout.fillHeight: true
-            //     // 处理后的视频预览
-            // }
-
-            // VideoOutput {
-            //     id:rawVideo
-            //     Layout.minimumHeight: 300
-            //     Layout.fillWidth: true
-            //     Layout.fillHeight: true
-            // }
             Image {
                 id:rawVideo
                 Layout.minimumHeight: 300
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                source: "image://frameprovider_raw/frame"
+                // source: "image://frameprovider_raw/frame"
                 // 处理后的视频预览
             }
         }
         
-
+        // 截屏功能加载器
         Loader {
             id: loader
             // anchors.fill: parent
@@ -198,7 +194,8 @@ ApplicationWindow {
             
             Button {
                 id : selcolor
-                text: "选取颜色"
+                text: "pick up color"
+                enabled : false // 默认不启用
                 onClicked: {
                     screenshotProvider.captureScreenshot();
                     loader.setSource("MyColorDialog.qml", { rootWindow: root });
@@ -208,7 +205,7 @@ ApplicationWindow {
             
             // 在已有Loader下方添加LAB显示绑定
             Label {
-                text: `当前LAB值:  L${currentLAB.lL.toFixed(1)} A${currentLAB.lA.toFixed(1)} B${currentLAB.lB.toFixed(1)}`
+                text: `Now LAB:  L${currentLAB.lL.toFixed(1)} A${currentLAB.lA.toFixed(1)} B${currentLAB.lB.toFixed(1)}`
                 font.bold: true
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
@@ -222,8 +219,8 @@ ApplicationWindow {
                 Layout.maximumWidth: 300   // 最大宽度限制
                 Layout.preferredHeight: 40 // 固定高度
                 model: ["Red", "Green", "Blue", "Black", "White"]
-                currentIndex: 0
-
+                currentIndex: -1 // 默认什么都不选
+                
                 // 比例控制样式
                 font.pixelSize: 14
 
@@ -235,7 +232,7 @@ ApplicationWindow {
                 }
 
                 contentItem: Text {
-                    text: "配置颜色: " + colorSelector.currentText
+                    text: "config: " + colorSelector.currentText
                     anchors.centerIn: parent
                     color: parent.palette.text
                     verticalAlignment: Text.AlignVCenter
@@ -259,8 +256,69 @@ ApplicationWindow {
                     }
                 }
 
-
-                onActivated: colorConfigSelected(model[index])
+                // 启用提取颜色按钮
+                onCurrentIndexChanged: {
+                    if (colorSelector.currentIndex === -1) return;
+                    selcolor.enabled = true;
+                    
+                    // 调用C++接口
+                    const colorName = colorSelector.model[currentIndex].toLowerCase();
+                    const labData = dataProcess.getColor(colorSelector.currentIndex, colorName);
+                    
+                    // 数据有效性检查
+                    if (labData.hasOwnProperty("L") && labData.L.length === 2 &&
+                        labData.hasOwnProperty("A") && labData.A.length === 2 &&
+                        labData.hasOwnProperty("B") && labData.B.length === 2) 
+                    {
+                        // 更新LAB滑块
+                        labChannelRepeater.itemAt(0).children[1].value = labData.L[0];
+                        labChannelRepeater.itemAt(0).children[2].value = labData.L[1];
+                        labChannelRepeater.itemAt(1).children[1].value = labData.A[0];
+                        labChannelRepeater.itemAt(1).children[2].value = labData.A[1];
+                        labChannelRepeater.itemAt(2).children[1].value = labData.B[0];
+                        labChannelRepeater.itemAt(2).children[2].value = labData.B[1];
+                    } else {
+                        // 处理无效数据
+                        console.error("Not set color:", colorName);
+                    }
+                }
+                // 点击下拉框时立即获取当前值(提供配置)
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        // 展开前保存当前配置
+                        if (!colorSelector.popup.visible) {
+                            // 获取当前选中的颜色
+                            var currentColor = (colorSelector.currentIndex === -1) ? 
+                                "" : colorSelector.model[colorSelector.currentIndex].toLowerCase();
+                            
+                            if (currentColor !== "") {
+                                // 获取LAB值并转换为JS数组
+                                var l = [
+                                    labChannelRepeater.itemAt(0).children[1].value,
+                                    labChannelRepeater.itemAt(0).children[2].value
+                                ];
+                                var a = [
+                                    labChannelRepeater.itemAt(1).children[1].value,
+                                    labChannelRepeater.itemAt(1).children[2].value
+                                ];
+                                var b = [
+                                    labChannelRepeater.itemAt(2).children[1].value,
+                                    labChannelRepeater.itemAt(2).children[2].value
+                                ];
+                                
+                                // 调用C++接口保存
+                                dataProcess.colorChanged(
+                                    colorSelector.currentIndex,
+                                    currentColor,
+                                    l, a, b
+                                );
+                            }
+                        }
+                        // 切换下拉框状态
+                        colorSelector.popup.visible = !colorSelector.popup.visible;
+                    }
+                }
             }
         }
 
@@ -281,7 +339,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     // 选项
                     Label {
-                        text: modelData + "通道"
+                        text: modelData + ":"
                         font.bold: true
                     }
                     // 前一个滑条
@@ -291,7 +349,7 @@ ApplicationWindow {
                         to: 255
                         value: 0
                         Layout.fillWidth: true
-                        onValueChanged: sliderChanged(modelData + "_min", value, maxSlider.value)
+                        // onValueChanged: cameraProcess.sliderChanged(modelData + "_min", value, maxSlider.value)
                     }
 
                     // 后一个滑条
@@ -301,7 +359,7 @@ ApplicationWindow {
                         to: 255
                         value: 255
                         Layout.fillWidth: true
-                        onValueChanged: sliderChanged(modelData + "_max", minSlider.value, value)
+                        // onValueChanged: cameraProcess.sliderChanged(modelData + "_max", minSlider.value, value)
                     }
                 }
             }
@@ -309,14 +367,15 @@ ApplicationWindow {
 
         // 配置保存区
         Button {
-            text: "保存配置文件"
-            onClicked: saveRequested()
+            text: "save config"
+            onClicked: dataProcess.saveRequested()
         }
     }
 
     
     Component.onCompleted: {
         cameraProcess.check();
+        dataProcess.loadconfig();
     }
     
 }

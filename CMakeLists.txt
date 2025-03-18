@@ -13,15 +13,34 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(/wd4819)
 
-# 设置OpenCV库路径
-set(OpenCV_DIR "D:/Program/OpenCV/opencv/build/x64/vc15/lib")
+# 是否使用交叉编译工具链的开关
+if (1)
+    message(STATUS "Using cross-compilation toolchain.")
+
+    # 使用工具链文件
+    include(CMakeForceCompiler) # CMake 3.6 版本之前
+    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/toolchain.cmake)
+
+    # 设置库路径
+    link_directories(${CMAKE_SYSROOT}/usr/lib)
+    
+else()
+    message(STATUS "Not using cross-compilation toolchain.")
+    
+endif()
+
 
 # 查找Qt5包
 find_package(Qt5 COMPONENTS Core Quick Qml Multimedia REQUIRED)
-
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  # 设置OpenCV库路径
+  set(OpenCV_DIR "D:/Program/OpenCV/opencv/build/x64/vc15/lib")
+endif()
 # 查找OpenCV包
 find_package(OpenCV REQUIRED)
+
 
 file(GLOB_RECURSE ALL_SOURCES 
     "src/core/*.cpp"
@@ -62,12 +81,21 @@ target_link_libraries(lab_tool
   ${OpenCV_LIBS}
 )
 
-# 添加MSVC编译器选项
-if(MSVC)
-    # 禁用4819警告（文件包含在当前代码页中无法表示的字符）
-    add_compile_options(/wd4819)
-    
-    # 可选：同时设置UTF-8编码（推荐长期解决方案）
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # 查找 PulseAudio 主循环库
+    find_library(PULSE_MAINLOOP_LIB
+        NAMES pulse-mainloop-glib
+        PATHS /usr/lib /usr/local/lib
+    )
+
+    # # 查找 GLib 库（可选，确保 GLib 依赖）
+    # find_package(PkgConfig REQUIRED)
+    # pkg_check_modules(GLIB REQUIRED glib-2.0)
+
+    if (PULSE_MAINLOOP_LIB)
+        message(STATUS "找到 libpulse-mainloop-glib: ${PULSE_MAINLOOP_LIB}")
+        target_link_libraries(lab_tool ${PULSE_MAINLOOP_LIB} ${GLIB_LIBRARIES})
+    else()
+        message(FATAL_ERROR "未找到 libpulse-mainloop-glib，请安装 libpulse-dev")
+    endif()
 endif()
