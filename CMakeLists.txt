@@ -13,6 +13,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(/wd4819)
 
 # 是否使用交叉编译工具链的开关
 if (1)
@@ -80,15 +81,6 @@ target_link_libraries(lab_tool
   ${OpenCV_LIBS}
 )
 
-# 添加MSVC编译器选项
-if(MSVC)
-    # 禁用4819警告（文件包含在当前代码页中无法表示的字符）
-    add_compile_options(/wd4819)
-    
-    # 可选：同时设置UTF-8编码（推荐长期解决方案）
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-endif()
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # 查找 PulseAudio 主循环库
     find_library(PULSE_MAINLOOP_LIB
