@@ -1,36 +1,30 @@
-#ifndef FRAMEIMAGEPROVIDER_H
-#define FRAMEIMAGEPROVIDER_H
+#ifndef IMAGEPROVIDER_H
+#define IMAGEPROVIDER_H
 
+#include <QObject>
 #include <QQuickImageProvider>
 #include <QImage>
 #include <QMutex>
 
-class FrameImageProvider : public QQuickImageProvider {
+class FrameImageProvider : public QObject, public QQuickImageProvider {
+    Q_OBJECT
 public:
-    FrameImageProvider() : QQuickImageProvider(QQuickImageProvider::Image) {}
+    explicit FrameImageProvider(QObject *parent = nullptr);
+    QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
 
-    QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override {
-        Q_UNUSED(id);
-        Q_UNUSED(requestedSize);
-        
-        QMutexLocker locker(&mutex);
-        if (size)
-            *size = frame.size();
-        return frame;
-    }
+public slots:
+    void setImage(const QImage& image);
 
-    void setImage(const QImage &image) {
-        QMutexLocker locker(&mutex);
-        frame = image;
-        qDebug() << "setImage";
-    }
+signals:
+    void imageChanged();
 
 private:
-    QImage frame;
-    QMutex mutex;
+    QImage m_image;
+    QMutex m_mutex;
 };
 
+// 全局变量声明
 extern FrameImageProvider *imageProvider_raw;
 extern FrameImageProvider *imageProvider_binary;
 
-#endif // FRAMEIMAGEPROVIDER_H
+#endif // IMAGEPROVIDER_H

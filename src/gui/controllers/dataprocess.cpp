@@ -164,19 +164,21 @@ void DataProcess::loadconfig() {
 }
 
 void DataProcess::saveRequested(){
+    for(int i = 0; i < configMap.size(); i++) {
+        if(configMap[i].isEmpty()){
+            emit errorOccurred("Config is not ready.");
+            return;
+        }
+    }
+    emit saveSuccess();
     saveConfig(configFilePath);
 }
 
 void DataProcess::saveConfig(const QString &filePath) {
     QSettings settings(filePath, QSettings::IniFormat);
     settings.clear();
-
     // 遍历 configMap，将每个颜色的 LABRange 写入 INI 文件
     for (int i = 0; i < configMap.size(); ++i) {
-        if(configMap[i].isEmpty()){
-            emit errorOccurred("Config is not ready.");
-            return;
-        }
         const QMap<QString, LABRange> &colorMap = configMap[i];
         for (auto it = colorMap.begin(); it != colorMap.end(); ++it) {
             const QString &color = it.key();

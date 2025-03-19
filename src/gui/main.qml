@@ -81,7 +81,7 @@ ApplicationWindow {
             }
         }
     }
-
+    // 摄像头处理对象
     CameraProcess {
         id: cameraProcess
         onCheckWarning: function(cameraList, i) {
@@ -97,16 +97,41 @@ ApplicationWindow {
             console.log("camera error");
         }
     }
+    Popup {
+        id: saveSuccessPopup
+        width: 300
+        height: 150
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape
 
+        Column {
+            anchors.centerIn: parent
+            spacing: 10
+            Label {
+                text: "Save success."
+                wrapMode: Text.Wrap
+            }
+            Button {
+                text: "OK"
+                onClicked: saveSuccessPopup.close()
+            }
+        }
+    }
+    // 数据处理对象
     DataProcess {
         id: dataProcess
+        
         onErrorOccurred : (msg) => {
             errorLabel.text = msg;
             errorPopup.open();
-            console.log(msg);
+            // console.log(msg);
+        }
+        onSaveSuccess : {
+            saveSuccessPopup.open();
         }
     }
-
+    // lab全局变量
     property QtObject currentLAB: QtObject {
         property real lL: 0
         property real lA: 0
@@ -168,15 +193,26 @@ ApplicationWindow {
             spacing: 15
 
             Image {
-                id:rawVideo
-                Layout.minimumHeight: 300
+                id:binaryVideo
+                Layout.minimumHeight: 100
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                // source: "image://frameprovider_raw/frame"
-                // 处理后的视频预览
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                cache: false
             }
+
+            Image {
+                id:rawVideo
+                Layout.minimumHeight: 100
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                cache: false
+            }           
         }
-        
+    
         // 截屏功能加载器
         Loader {
             id: loader
@@ -378,4 +414,23 @@ ApplicationWindow {
         dataProcess.loadconfig();
     }
     
+    onClosing: {
+        cameraProcess.stopProcess();
+    }
+
+    Connections {
+        target: frameProviderRaw
+        onImageChanged: {
+            rawVideo.source = ""
+            rawVideo.source = "image://frameprovider_raw/m_image"
+        }
+    }
+    Connections {
+        target: frameProviderBinary
+        onImageChanged: {
+            binaryVideo.source = ""
+            binaryVideo.source = "image://frameprovider_binary/m_image"
+        }
+    }
+
 }

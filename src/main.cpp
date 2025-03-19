@@ -17,19 +17,20 @@ int main(int argc, char *argv[])
 #endif
 
 	QGuiApplication app(argc, argv);
+    QQmlApplicationEngine engine;
+    
+	// 注册图像提供者
+	// 创建并注册对象(主程序管理)图像提供器注册
 
-	QQmlApplicationEngine engine;
-
-	// 创建并注册对象(主程序管理)
 	ScreenshotProvider *screenshotProvider = new ScreenshotProvider();
     imageProvider_raw = new FrameImageProvider();
-    imageProvider_binary = new FrameImageProvider();
-	// 图像提供器注册
+    imageProvider_binary = new FrameImageProvider();    
+
     engine.addImageProvider("frameprovider_raw", imageProvider_raw);
     engine.addImageProvider("frameprovider_binary", imageProvider_binary);
-
 	engine.addImageProvider("screenshotProvider", screenshotProvider);
-
+	engine.rootContext()->setContextProperty("frameProviderRaw", imageProvider_raw);
+    engine.rootContext()->setContextProperty("frameProviderBinary", imageProvider_binary);
 	engine.rootContext()->setContextProperty("screenshotProvider", screenshotProvider);
 	
 	// 注册对象(控制器)

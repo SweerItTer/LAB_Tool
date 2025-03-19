@@ -45,6 +45,7 @@ public slots:
 signals:
     void rgbDataProcessed(float L, float A, float B); // 处理完成信号
     void errorOccurred(const QString &message); // 错误信号
+    void saveSuccess();
 private:
     // 保存配置
     void saveConfig(const QString &filePath);
