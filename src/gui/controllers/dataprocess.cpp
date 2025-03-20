@@ -1,5 +1,6 @@
 #include <QSettings>
 #include <QFile>
+#include <QDebug>
 
 #include "dataprocess.h"
 #include "src/core/ColorConverter.h"
@@ -11,6 +12,7 @@ void DataProcess::processRGB(const QColor &color)
     // LAB转换
     float labArray[3];
     ColorUtils::RGB2LAB(color, labArray);
+    qDebug() << color << labArray;
     // 这里暂时直接转发原始数据
     emit rgbDataProcessed(labArray[0], labArray[1], labArray[2]);
 }
@@ -86,12 +88,7 @@ QVariantMap DataProcess::getColor(int index, const QString &colorName)
     return result;
 }
 
-#include <QSettings>
-#include <QDebug>
-
 void DataProcess::loadconfig() {
-    // configMap.clear(); // 清空旧配置
-
     if (configFilePath.isEmpty() || !QFile::exists(configFilePath))
     {
         qDebug() << "Config file not found.";
@@ -103,7 +100,7 @@ void DataProcess::loadconfig() {
     // 1. 获取所有分组
     const QStringList groups = settings.childGroups();
     if(groups.size() != 5){
-        qDebug() << "No config found.";
+        qDebug() << "Config groups:" << groups.size();
         return;
     }
     for (const QString &group : groups) {
@@ -159,24 +156,29 @@ void DataProcess::loadconfig() {
     
     // 如果 INI 文件为空，初始化默认配置
     if (configMap.isEmpty()) {
-        qDebug() << "No config found.";
+        qDebug() << "No config found."<<__LINE__;
     }
+    // settings.clear();
+    
+
 }
 
 void DataProcess::saveRequested(){
+    for(int i = 0; i < configMap.size(); i++) {
+        if(configMap[i].isEmpty()){
+            qDebug() << configMap[i].begin().key();
+            emit errorOccurred("Config is not ready.");
+            return;
+        }
+    }
+    emit saveSuccess();
     saveConfig(configFilePath);
 }
 
 void DataProcess::saveConfig(const QString &filePath) {
     QSettings settings(filePath, QSettings::IniFormat);
-    settings.clear();
-
     // 遍历 configMap，将每个颜色的 LABRange 写入 INI 文件
     for (int i = 0; i < configMap.size(); ++i) {
-        if(configMap[i].isEmpty()){
-            emit errorOccurred("Config is not ready.");
-            return;
-        }
         const QMap<QString, LABRange> &colorMap = configMap[i];
         for (auto it = colorMap.begin(); it != colorMap.end(); ++it) {
             const QString &color = it.key();

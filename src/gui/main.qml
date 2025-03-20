@@ -81,7 +81,7 @@ ApplicationWindow {
             }
         }
     }
-
+    // 摄像头处理对象
     CameraProcess {
         id: cameraProcess
         onCheckWarning: function(cameraList, i) {
@@ -97,16 +97,41 @@ ApplicationWindow {
             console.log("camera error");
         }
     }
+    Popup {
+        id: saveSuccessPopup
+        width: 300
+        height: 150
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape
 
+        Column {
+            anchors.centerIn: parent
+            spacing: 10
+            Label {
+                text: "Save success."
+                wrapMode: Text.Wrap
+            }
+            Button {
+                text: "OK"
+                onClicked: saveSuccessPopup.close()
+            }
+        }
+    }
+    // 数据处理对象
     DataProcess {
         id: dataProcess
+        
         onErrorOccurred : (msg) => {
             errorLabel.text = msg;
             errorPopup.open();
-            console.log(msg);
+            // console.log(msg);
+        }
+        onSaveSuccess : {
+            saveSuccessPopup.open();
         }
     }
-
+    // lab全局变量
     property QtObject currentLAB: QtObject {
         property real lL: 0
         property real lA: 0
@@ -168,15 +193,26 @@ ApplicationWindow {
             spacing: 15
 
             Image {
-                id:rawVideo
-                Layout.minimumHeight: 300
+                id:binaryVideo
+                Layout.minimumHeight: 100
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                // source: "image://frameprovider_raw/frame"
-                // 处理后的视频预览
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                cache: false
             }
+
+            Image {
+                id:rawVideo
+                Layout.minimumHeight: 100
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                cache: false
+            }           
         }
-        
+    
         // 截屏功能加载器
         Loader {
             id: loader
@@ -255,6 +291,7 @@ ApplicationWindow {
                         context.fill();
                     }
                 }
+              
 
                 // 启用提取颜色按钮
                 onCurrentIndexChanged: {
@@ -349,7 +386,39 @@ ApplicationWindow {
                         to: 255
                         value: 0
                         Layout.fillWidth: true
-                        // onValueChanged: cameraProcess.sliderChanged(modelData + "_min", value, maxSlider.value)
+                        // 记录上次触发值
+                        property real _pendingValue: value
+                        property real _lastEmitted: value
+                        property bool _hasPending: false
+
+                        // 使用Timer合并频繁操作
+                        Timer {
+                            id: syncTimer_min
+                            interval: 500
+                            onTriggered: {
+                                // 单次变动如果小于阈值,但是_hasPending为true,则强制发送信号
+                                if (Math.abs(minSlider._pendingValue - minSlider._lastEmitted) >= 2 || minSlider._hasPending) {
+                                    cameraProcess.sliderChanged(modelData, minSlider.value, maxSlider.value)
+                                    minSlider._lastEmitted = minSlider._pendingValue
+                                    minSlider._hasPending = false
+                                }
+                            }
+                        }
+
+                        onValueChanged: {
+                            _pendingValue = value
+                            _hasPending = true
+                            // 改变值的时候开启(记录变动)
+                            if (!syncTimer_min.running) syncTimer_min.start()
+                        }
+
+                        onPressedChanged: {
+                            // 松开后停止计时器并触发信号
+                            if (!pressed && _hasPending) {
+                                syncTimer_min.stop()
+                                syncTimer_min.triggered()
+                            }
+                        }         
                     }
 
                     // 后一个滑条
@@ -359,7 +428,39 @@ ApplicationWindow {
                         to: 255
                         value: 255
                         Layout.fillWidth: true
-                        // onValueChanged: cameraProcess.sliderChanged(modelData + "_max", minSlider.value, value)
+
+                        property real _pendingValue: value
+                        property real _lastEmitted: value
+                        property bool _hasPending: false
+
+                        // 使用Timer合并频繁操作
+                        Timer {
+                            id: syncTimer_max
+                            interval: 300
+                            onTriggered: {
+                                // 单次变动如果小于阈值,但是_hasPending为true,则强制发送信号
+                                if (Math.abs(maxSlider._pendingValue - maxSlider._lastEmitted) >= 2 || maxSlider._hasPending) {
+                                    cameraProcess.sliderChanged(modelData, minSlider.value, maxSlider.value)
+                                    maxSlider._lastEmitted = maxSlider._pendingValue
+                                    maxSlider._hasPending = false
+                                }
+                            }
+                        }
+
+                        onValueChanged: {
+                            _pendingValue = value
+                            _hasPending = true
+                            // 改变值的时候开启(记录变动)
+                            if (!syncTimer_max.running) syncTimer_max.start()
+                        }
+
+                        onPressedChanged: {
+                            // 松开后停止计时器并触发信号
+                            if (!pressed && _hasPending) {
+                                syncTimer_max.stop()
+                                syncTimer_max.triggered()
+                            }
+                        }
                     }
                 }
             }
@@ -378,4 +479,23 @@ ApplicationWindow {
         dataProcess.loadconfig();
     }
     
+    onClosing: {
+        cameraProcess.stopProcess();
+    }
+
+    Connections {
+        target: frameProviderRaw
+        onImageChanged: {
+            rawVideo.source = ""
+            rawVideo.source = "image://frameprovider_raw/m_image"
+        }
+    }
+    Connections {
+        target: frameProviderBinary
+        onImageChanged: {
+            binaryVideo.source = ""
+            binaryVideo.source = "image://frameprovider_binary/m_image"
+        }
+    }
+
 }
