@@ -28,7 +28,7 @@ Window {
             rootWindow.currentLAB.lL = l;
             rootWindow.currentLAB.lA = a;
             rootWindow.currentLAB.lB = b;
-            // console.log("LAB: ", l, a, b);
+            console.log("LAB: ", l, a, b);
 
             close();
         }

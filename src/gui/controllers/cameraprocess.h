@@ -21,6 +21,8 @@ public slots:
     void check(); // 槽函数
     void startProcess(int index); // 开始处理的槽函数
     void stopProcess();
+
+    void sliderChanged(const QString &id, double min, double max);
 signals:
     // 摄像头信息, 标志(0: 单个摄像头, 1: 多个摄像头)
     void checkWarning(QStringList cameraNames, int index);

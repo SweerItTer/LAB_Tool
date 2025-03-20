@@ -29,6 +29,11 @@ void CameraProcess::stopProcess()
     m_cameraManager->stopProcessing(); // 启动 OpenCV 处理线程
 }
 
+void CameraProcess::sliderChanged(const QString &id, double min, double max)
+{
+    m_cameraManager->setValue(id, min, max);
+}
+
 void CameraProcess::check()
 {
     QStringList cameraNames;
